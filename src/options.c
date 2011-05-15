@@ -82,6 +82,7 @@ static void opt_help(const char *pname) {
 		"\t   | --stpinc   FLOAT   (rprop)  step increment factor\n"
 		"\t   | --stpdec   FLOAT   (rprop)  step decrement factor\n"
 		"\t   | --cutoff           (rprop)  alternate projection\n"
+		"\t z | --peralpha FLOAT   (perceptron)  learning rate\n"
 		"\n"
 		"Labelling mode:\n"
 		"    %1$s label [options] [input data] [output data]\n"
@@ -115,6 +116,7 @@ const opt_t opt_defaults = {
 	.bcd   = {.kappa  = 1.5},
 	.rprop = {.stpmin = 1e-8, .stpmax = 50.0, .stpinc = 1.2, .stpdec = 0.5,
 	          .cutoff = false},
+	.perceptron = {.alpha = 0.01},
 	.label   = false,    .check   = false, .outsc = false,
 	.lblpost = false,    .nbest = 1
 };
@@ -150,6 +152,7 @@ struct {
 	{0, "##", "--maxls",   'I', offsetof(opt_t, lbfgs.maxls )},
 	{0, "##", "--eta0",    'F', offsetof(opt_t, sgdl1.eta0  )},
 	{0," ##", "--alpha",   'F', offsetof(opt_t, sgdl1.alpha )},
+	{0, "-z", "--peralpha",'F', offsetof(opt_t, perceptron.alpha )},
 	{0, "##", "--kappa",   'F', offsetof(opt_t, bcd.kappa   )},
 	{0, "##", "--stpmin",  'F', offsetof(opt_t, rprop.stpmin)},
 	{0, "##", "--stpmax",  'F', offsetof(opt_t, rprop.stpmax)},
@@ -270,6 +273,7 @@ void opt_parse(int argc, char *argv[argc], opt_t *opt) {
 	argchecksub("--maxls",   opt->lbfgs.maxls  >  0  );
 	argchecksub("--eta0",    opt->sgdl1.eta0   >  0.0);
 	argchecksub("--alpha",   opt->sgdl1.alpha  >  0.0);
+	argchecksub("--peralpha",   opt->perceptron.alpha  >  0.0);
 	argchecksub("--nbest",   opt->nbest        >  0  );
 	#undef argchecksub
 	if (opt->maxent && !strcmp(opt->algo, "bcd"))

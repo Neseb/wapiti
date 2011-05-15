@@ -75,6 +75,10 @@ struct opt_s {
 		double stpdec;
 		bool   cutoff;
 	} rprop;
+	// Options specific to perceptron
+	struct {
+		double alpha;
+	} perceptron;
 	// Options for labelling
 	bool   label;
 	bool   check;
