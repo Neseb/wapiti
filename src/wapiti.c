@@ -62,6 +62,7 @@ static const struct {
 	{"rprop",  trn_rprop},
 	{"rprop+", trn_rprop},
 	{"rprop-", trn_rprop},
+	{"perceptron", trn_perceptron},
 	{"auto",   trn_auto }
 };
 static const int trn_cnt = sizeof(trn_lst) / sizeof(trn_lst[0]);
@@ -145,6 +146,7 @@ static void dotrain(mdl_t *mdl) {
 	// And train the model...
 	info("* Train the model with %s\n", mdl->opt->algo);
 	uit_setup(mdl);
+info("On lance l'apprentissage %s\n", trn_lst[trn].name);
 	trn_lst[trn].train(mdl);
 	uit_cleanup(mdl);
 	// If requested compact the model.

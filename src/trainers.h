@@ -34,6 +34,7 @@ void trn_lbfgs(mdl_t *mdl);
 void trn_sgdl1(mdl_t *mdl);
 void trn_bcd(mdl_t *mdl);
 void trn_rprop(mdl_t *mdl);
+void trn_perceptron(mdl_t *mdl);
 
 #endif
 
