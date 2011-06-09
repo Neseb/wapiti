@@ -146,7 +146,6 @@ static void dotrain(mdl_t *mdl) {
 	// And train the model...
 	info("* Train the model with %s\n", mdl->opt->algo);
 	uit_setup(mdl);
-info("On lance l'apprentissage %s\n", trn_lst[trn].name);
 	trn_lst[trn].train(mdl);
 	uit_cleanup(mdl);
 	// If requested compact the model.

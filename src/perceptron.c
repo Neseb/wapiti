@@ -30,7 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "wapiti.h"
+//#include "wapiti.h"
 //#include "gradient.h"
 #include "model.h"
 #include "options.h"
@@ -53,12 +53,13 @@ void trn_perceptron(mdl_t *mdl) {
 	const int     K = mdl->opt->maxiter;
 	const double alpha = mdl->opt->perceptron.alpha;
 	double 	*w = mdl->theta;	
-	// wsum : somme de tous les poids
-//	double* wsum = xmalloc(F*sizeof(double));
-//	for(size_t i = 0 ; i < F ; i++)
-//		wsum[i] = w[i];
+	//wsum : somme de tous les poids
+	//TODO : vectoriser tout ça
+	double* wsum = xmalloc(F*sizeof(double));
+	for(size_t i = 0 ; i < F ; i++)
+		wsum[i] = w[i];
 	//Nombre total de mises à jour de w
-//	int N = 0;
+	int N = 0;
 
 	for (int k = 0 ; k < K ; k++) { 
 		//pour un nombre maxiter de fois
@@ -100,9 +101,9 @@ void trn_perceptron(mdl_t *mdl) {
 					const size_t o = pos->uobs[p];
 					w[mdl->uoff[o] + yt] += alpha;
 					w[mdl->uoff[o] + y] -= alpha;
-//					for(size_t i = 0 ; i < F ; i++)
-//						wsum[i] += w[i];
-//					N++;
+					for(size_t i = 0 ; i < F ; i++)
+						wsum[i] += w[i];
+					N++;
 				}
 				//Pour tous les mots suivants, on regarde 
 				//à la fois les unigrammes et les bigrammes
@@ -116,9 +117,9 @@ void trn_perceptron(mdl_t *mdl) {
 						const size_t o = pos->uobs[p];
 						w[mdl->uoff[o] + yt] += alpha;
 						w[mdl->uoff[o] + y] -= alpha;
-//						for(size_t i = 0 ; i < F ; i++)
-//							wsum[i] += w[i];
-//						N++;
+						for(size_t i = 0 ; i < F ; i++)
+							wsum[i] += w[i];
+						N++;
 					}
 					for(size_t p = 0 ; p < pos->bcnt ; p++) {
 						const size_t o = pos->bobs[p];
@@ -126,23 +127,23 @@ void trn_perceptron(mdl_t *mdl) {
 						size_t dt = Y*ypt + yt;
 						w[mdl->boff[o] + dt] += alpha;
 						w[mdl->boff[o] + d] -= alpha;
-//						for(size_t i = 0 ; i < F ; i++)
-//						wsum[i] += w[i];
-//						N++;
+						for(size_t i = 0 ; i < F ; i++)
+						wsum[i] += w[i];
+						N++;
 					} 
 				}
 			}
 			free(out);
 		}
+		//TODO : rajouter des uit_stop
+		for(size_t i = 0 ; i < F ; i++)
+			w[i] = wsum[i] / N;
 		// Repport progress back to the user
 		if (!uit_progress(mdl, k + 1, -1.0))
 			break;
 	}
+	free(wsum);
 
-	//TODO : rajouter des uit_stop
-	//for(size_t i = 0 ; i < F ; i++)
-	//	w[i] = wsum[i] / N;
-	//free(wsum);
 };
 /*
   theta : contient toutes les features présentes dans le train (tous les tests sur les observations, * Y feat unigrammes * YY feat bigrammes)
