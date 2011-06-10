@@ -30,8 +30,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "wapiti.h"
-//#include "gradient.h"
 #include "model.h"
 #include "options.h"
 #include "progress.h"
@@ -47,18 +45,19 @@
 void trn_perceptron(mdl_t *mdl) {
 	const size_t  Y = mdl->nlbl;
 	const size_t  F = mdl->nftr;
-//	const int     U = mdl->reader->nuni;
-//	const int     B = mdl->reader->nbi;
+	//	const int     U = mdl->reader->nuni;
+	//	const int     B = mdl->reader->nbi;
 	const int     S = mdl->train->nseq;
 	const int     K = mdl->opt->maxiter;
 	const double alpha = mdl->opt->perceptron.alpha;
 	double 	*w = mdl->theta;	
-	// wsum : somme de tous les poids
-//	double* wsum = xmalloc(F*sizeof(double));
-//	for(size_t i = 0 ; i < F ; i++)
-//		wsum[i] = w[i];
+	//wsum : somme de tous les poids
+	//TODO : vectoriser tout ça
+	double* wsum = xmalloc(F*sizeof(double));
+	for(size_t i = 0 ; i < F ; i++)
+		wsum[i] = w[i];
 	//Nombre total de mises à jour de w
-//	int N = 0;
+	int N = 0;
 
 	for (int k = 0 ; k < K ; k++) { 
 		//pour un nombre maxiter de fois
@@ -100,9 +99,9 @@ void trn_perceptron(mdl_t *mdl) {
 					const size_t o = pos->uobs[p];
 					w[mdl->uoff[o] + yt] += alpha;
 					w[mdl->uoff[o] + y] -= alpha;
-//					for(size_t i = 0 ; i < F ; i++)
-//						wsum[i] += w[i];
-//					N++;
+					for(size_t i = 0 ; i < F ; i++)
+						wsum[i] += w[i];
+					N++;
 				}
 				//Pour tous les mots suivants, on regarde 
 				//à la fois les unigrammes et les bigrammes
@@ -116,9 +115,9 @@ void trn_perceptron(mdl_t *mdl) {
 						const size_t o = pos->uobs[p];
 						w[mdl->uoff[o] + yt] += alpha;
 						w[mdl->uoff[o] + y] -= alpha;
-//						for(size_t i = 0 ; i < F ; i++)
-//							wsum[i] += w[i];
-//						N++;
+						for(size_t i = 0 ; i < F ; i++)
+							wsum[i] += w[i];
+						N++;
 					}
 					for(size_t p = 0 ; p < pos->bcnt ; p++) {
 						const size_t o = pos->bobs[p];
@@ -126,46 +125,45 @@ void trn_perceptron(mdl_t *mdl) {
 						size_t dt = Y*ypt + yt;
 						w[mdl->boff[o] + dt] += alpha;
 						w[mdl->boff[o] + d] -= alpha;
-//						for(size_t i = 0 ; i < F ; i++)
-//						wsum[i] += w[i];
-//						N++;
+						for(size_t i = 0 ; i < F ; i++)
+							wsum[i] += w[i];
+						N++;
 					} 
 				}
 			}
 			free(out);
 		}
+		//TODO : rajouter des uit_stop
+		for(size_t i = 0 ; i < F ; i++)
+			w[i] = wsum[i] / N;
 		// Repport progress back to the user
 		if (!uit_progress(mdl, k + 1, -1.0))
 			break;
 	}
-
-	//TODO : rajouter des uit_stop
-	//for(size_t i = 0 ; i < F ; i++)
-	//	w[i] = wsum[i] / N;
-	//free(wsum);
+		free(wsum);
 };
 /*
-  theta : contient toutes les features présentes dans le train (tous les tests sur les observations, * Y feat unigrammes * YY feat bigrammes)
-  qui??? génère les feat pour une phrase (d'entrainement...) donnée ?
-  -> défini dans /sequence.h/, |uobs| est créé dans _dotrain_
+theta : contient toutes les features présentes dans le train (tous les tests sur les observations, * Y feat unigrammes * YY feat bigrammes)
+qui??? génère les feat pour une phrase (d'entrainement...) donnée ?
+-> défini dans /sequence.h/, |uobs| est créé dans _dotrain_
 
-  l'algo d'entraînement est appelé dans dotrain(mdl_t *mdl), avec comme argument un modèle (où les données d'entraînement ont été chargées : on a les uobs , les bobs dans seq->pos[i] : données de la séquence d'entraînement à la position $i$, cf sequence.h
+l'algo d'entraînement est appelé dans dotrain(mdl_t *mdl), avec comme argument un modèle (où les données d'entraînement ont été chargées : on a les uobs , les bobs dans seq->pos[i] : données de la séquence d'entraînement à la position $i$, cf sequence.h
 
 
 // Pour chaque position dans la séquence
 for (int t = 0; t < T; t++) {
-  // On récupère les données à cette position
-  const pos_t *pos = &(seq->pos[t]);
-  // Pour chaque label possible
-  for (size_t y = 0; y < Y; y++) {
-    double sum = 0.0;
-    for (size_t n = 0; n < pos->ucnt; n++) {
-      const size_t o = pos->uobs[n];
-      sum += x[mdl->uoff[o] + y];
-    }
-    for (size_t yp = 0; yp < Y; yp++)
-      (*psi)[t][yp][y] = sum;
-  }
- }
+// On récupère les données à cette position
+const pos_t *pos = &(seq->pos[t]);
+// Pour chaque label possible
+for (size_t y = 0; y < Y; y++) {
+double sum = 0.0;
+for (size_t n = 0; n < pos->ucnt; n++) {
+const size_t o = pos->uobs[n];
+sum += x[mdl->uoff[o] + y];
+}
+for (size_t yp = 0; yp < Y; yp++)
+(*psi)[t][yp][y] = sum;
+}
+}
 
 */
