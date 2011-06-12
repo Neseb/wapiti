@@ -59,13 +59,30 @@ void trn_perceptron(mdl_t *mdl) {
 	//Nombre total de mises à jour de w
 	int N = 0;
 
-	for (int k = 0 ; k < K ; k++) { 
+
+	// We will process sequences in random order in each iteration, so we
+	// will have to permute them. The current permutation is stored in a
+	// vector called <perm> shuffled at the start of each iteration. We
+	// just initialize it with the identity permutation.
+	int *perm = xmalloc(sizeof(int) * S);
+	for (int s = 0; s < S; s++)
+		perm[s] = s;
+
+	for (int k = 0 ; k < K && !uit_stop; k++) { 
 		//pour un nombre maxiter de fois
 
-		for (int s = 0 ; s < S ; s++) { 
-			//pour s dans l'ensemble d'entrainement
-			//TODO : randomiser
-
+		// First we shuffle the sequence by making a lot of random swap
+		// of entry in the permutation index.
+		for (int s = 0; s < S; s++) {
+			const int a = rand() % S;
+			const int b = rand() % S;
+			const int t = perm[a];
+			perm[a] = perm[b];
+			perm[b] = t;
+		}
+		// And so, we can process sequence in a random order
+		for (int sp = 0; sp < S && !uit_stop; sp++) {
+			const int s = perm[sp];
 			const seq_t *seq = mdl->train->seq[s];
 			int T = seq->len;
 			size_t* out = xmalloc(T * sizeof(size_t)); //tableau 
@@ -95,7 +112,7 @@ void trn_perceptron(mdl_t *mdl) {
 				const pos_t* pos = &(seq->pos[0]);
 				size_t y = out[0]; 
 				size_t yt = pos->lbl;
-				for(size_t p = 0 ; p < pos->ucnt ; p++) {
+				for(size_t p = 0 ; p < pos->ucnt && !uit_stop ; p++) {
 					const size_t o = pos->uobs[p];
 					w[mdl->uoff[o] + yt] += alpha;
 					w[mdl->uoff[o] + y] -= alpha;
@@ -105,7 +122,7 @@ void trn_perceptron(mdl_t *mdl) {
 				}
 				//Pour tous les mots suivants, on regarde 
 				//à la fois les unigrammes et les bigrammes
-				for(int t = 1 ; t < T ; t++) { 
+				for(int t = 1 ; t < T  && !uit_stop ; t++) { 
 					const pos_t *pos = &(seq->pos[t]);
 					size_t y = out[t]; 
 					size_t yt = pos->lbl;
@@ -119,7 +136,7 @@ void trn_perceptron(mdl_t *mdl) {
 							wsum[i] += w[i];
 						N++;
 					}
-					for(size_t p = 0 ; p < pos->bcnt ; p++) {
+					for(size_t p = 0 ; p < pos->bcnt  && !uit_stop ; p++) {
 						const size_t o = pos->bobs[p];
 						size_t d = Y*yp + y;
 						size_t dt = Y*ypt + yt;
@@ -140,7 +157,8 @@ void trn_perceptron(mdl_t *mdl) {
 		if (!uit_progress(mdl, k + 1, -1.0))
 			break;
 	}
-		free(wsum);
+	free(wsum);
+	free(perm);
 };
 /*
 theta : contient toutes les features présentes dans le train (tous les tests sur les observations, * Y feat unigrammes * YY feat bigrammes)
@@ -166,4 +184,4 @@ for (size_t yp = 0; yp < Y; yp++)
 }
 }
 
-*/
+ */
