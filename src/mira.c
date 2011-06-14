@@ -39,6 +39,8 @@
 
 #include "decoder.h"
 
+#include "fmesure.h"
+
 //Algorithme MIRA**/
 
 void trn_mira(mdl_t *mdl) {
@@ -48,7 +50,8 @@ void trn_mira(mdl_t *mdl) {
 	//	const int     B = mdl->reader->nbi;
 	const int     S = mdl->train->nseq;
 	const int     K = mdl->opt->maxiter;
-	const double alpha = mdl->opt->mira.alpha;
+const double C = mdl->opt->mira.C;
+//	const double alpha = mdl->opt->mira.alpha;
 	double 	*w = mdl->theta;	
 	//wsum : somme de tous les poids
 	//TODO : vectoriser tout ça
@@ -90,13 +93,16 @@ void trn_mira(mdl_t *mdl) {
 			bool differents = false;
 			//On commence par regarder si le meilleur (out) est 
 			//la référence (seq)
+			int featCount = 0;
 			for(int t = 0 ; t < T ; t++) {
 				//Pour chaque unité dans les séquences : 
 				//(les deux en ont autant)
 				if (out[t] != (seq->pos[t]).lbl ) { 
 					//si les deux labels sont différents
 					differents = true;
-					break;
+				// Norme de \delta h : pour chaque, si égal 0 si différents +1
+				// = count
+					featCount++;	
 				}
 			}
 			if (differents) { 
@@ -108,12 +114,46 @@ void trn_mira(mdl_t *mdl) {
 				//chaque feature activée par (y,s,x) :
 				// On prend en compte les features 
 				// unigrammes du premier mot
-				
+
 				//Alpha dépend de ....
 				//On a alpha = max(0,min(C,(loss(out,seq) 
 				// - \delta H_(t-1))/norme(\delta h_(t-1))
 
+				//On calcule alpha
+				//L = 1 - fmesure(out, pos, T)
+				// \delta H : pour chaque si égal 0 si différents +(différence
+				// des poids)
 
+				// Pour le premier mot on ne regarde que les feat. unigrammes
+				const pos_t* pos = &(seq->pos[0]);
+				size_t y = out[0]; 
+				size_t yt = pos->lbl;
+				for(size_t p = 0 ; p < pos->ucnt && !uit_stop ; p++) {
+					const size_t o = pos->uobs[p];
+					featSum += w[mdl->uoff[o] + yt] - w[mdl->uoff[o] + y]; 
+				}
+				//Pour tous les mots suivants, on regarde 
+				//à la fois les unigrammes et les bigrammes
+				for(int t = 1 ; t < T  && !uit_stop ; t++) { 
+					const pos_t *pos = &(seq->pos[t]);
+					size_t y = out[t]; 
+					size_t yt = pos->lbl;
+					size_t yp = out[t-1]; 
+					size_t ypt = seq->pos[t-1].lbl; 
+					for(size_t p = 0 ; p < pos->ucnt ; p++) {
+						const size_t o = pos->uobs[p];
+					featSum += w[mdl->uoff[o] + yt] - w[mdl->uoff[o] + y]; 
+					}
+					for(size_t p = 0 ; p < pos->bcnt  && !uit_stop ; p++) {
+						const size_t o = pos->bobs[p];
+						size_t d = Y*yp + y;
+						size_t dt = Y*ypt + yt;
+					featSum += w[mdl->boff[o] + dt] - w[mdl->boff[o] + d];
+					} 
+				}
+				double L = (1 - fmesure(out,seq,Y) -featSum) / featCount;
+				double alpha = L < C ? : (L > 0 ? : L : 0)  : C ;
+			// Maintenant qu'on a calculé alpha, on peut appliquer l'update perceptron
 
 				const pos_t* pos = &(seq->pos[0]);
 				size_t y = out[0]; 
@@ -190,4 +230,4 @@ for (size_t yp = 0; yp < Y; yp++)
 }
 }
 
- */
+*/
