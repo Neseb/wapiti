@@ -24,76 +24,16 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef options_h
-#define options_h
 
+#ifndef gradient_h
+#define gradient_h
+
+#include <math.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include "sequence.h"
 
-#include "wapiti.h"
-
-/* opt_t:
- *   This structure hold all user configurable parameter for Wapiti and is
- *   filled with parameters from command line.
- */
-typedef struct opt_s opt_t;
-struct opt_s {
-	int    mode;
-	char  *input,  *output;
-	bool   maxent;
-	// Options for training
-	char  *algo,   *pattern;
-	char  *model,  *devel;
-	bool   compact, sparse;
-	int    nthread;
-	int    jobsize;
-	int    maxiter;
-	double rho1,    rho2;
-	// Window size criterion
-	int    objwin;
-	int    stopwin;
-	double stopeps;
-	// Options specific to L-BFGS
-	struct {
-		bool   clip;
-		int    histsz;
-		int    maxls;
-	} lbfgs;
-	// Options specific to SGD-L1
-	struct {
-		double eta0;
-		double alpha;
-	} sgdl1;
-	// Options specific to BCD
-	struct {
-		double kappa;
-	} bcd;
-	// Options specific to RPROP
-	struct {
-		double stpmin;
-		double stpmax;
-		double stpinc;
-		double stpdec;
-		bool   cutoff;
-	} rprop;
-	// Options specific to perceptron
-	struct {
-		double alpha;
-	} perceptron;
-	// Options specific to mira 
-	struct {
-		double C;
-	} mira;
-	// Options for labelling
-	bool   label;
-	bool   check;
-	bool   outsc;
-	bool   lblpost;
-	int    nbest;
-};
-
-extern const opt_t opt_defaults;
-
-void opt_parse(int argc, char *argv[argc], opt_t *opt);
+double fmesure(size_t* out, const seq_t* seq, size_t Y ) ;
 
 #endif
-

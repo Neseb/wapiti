@@ -38,7 +38,7 @@
 #include "vmath.h"
 
 #include "decoder.h"
-
+#include "trainers.h"
 #include "fmesure.h"
 
 //Algorithme MIRA**/
@@ -50,7 +50,8 @@ void trn_mira(mdl_t *mdl) {
 	//	const int     B = mdl->reader->nbi;
 	const int     S = mdl->train->nseq;
 	const int     K = mdl->opt->maxiter;
-const double C = mdl->opt->mira.C;
+const double C = 1;
+//const double C = mdl->opt->mira.C;
 //	const double alpha = mdl->opt->mira.alpha;
 	double 	*w = mdl->theta;	
 	//wsum : somme de tous les poids
@@ -94,6 +95,7 @@ const double C = mdl->opt->mira.C;
 			//On commence par regarder si le meilleur (out) est 
 			//la référence (seq)
 			int featCount = 0;
+			double featSum = 0;
 			for(int t = 0 ; t < T ; t++) {
 				//Pour chaque unité dans les séquences : 
 				//(les deux en ont autant)
@@ -135,9 +137,9 @@ const double C = mdl->opt->mira.C;
 				//Pour tous les mots suivants, on regarde 
 				//à la fois les unigrammes et les bigrammes
 				for(int t = 1 ; t < T  && !uit_stop ; t++) { 
-					const pos_t *pos = &(seq->pos[t]);
-					size_t y = out[t]; 
-					size_t yt = pos->lbl;
+					pos = &(seq->pos[t]);
+					y = out[t]; 
+					yt = pos->lbl;
 					size_t yp = out[t-1]; 
 					size_t ypt = seq->pos[t-1].lbl; 
 					for(size_t p = 0 ; p < pos->ucnt ; p++) {
@@ -151,13 +153,12 @@ const double C = mdl->opt->mira.C;
 					featSum += w[mdl->boff[o] + dt] - w[mdl->boff[o] + d];
 					} 
 				}
-				double L = (1 - fmesure(out,seq,Y) -featSum) / featCount;
-				double alpha = L < C ? : (L > 0 ? : L : 0)  : C ;
+				double L = (1 - fmesure(out,seq,Y) - featSum) / (double) featCount;
+				double alpha = (L < C) ? ((L > 0) ? L : 0) : C ;
 			// Maintenant qu'on a calculé alpha, on peut appliquer l'update perceptron
-
-				const pos_t* pos = &(seq->pos[0]);
-				size_t y = out[0]; 
-				size_t yt = pos->lbl;
+				pos = &(seq->pos[0]);
+				y = out[0]; 
+				yt = pos->lbl;
 				for(size_t p = 0 ; p < pos->ucnt && !uit_stop ; p++) {
 					const size_t o = pos->uobs[p];
 					w[mdl->uoff[o] + yt] += alpha;

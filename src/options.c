@@ -82,7 +82,8 @@ static void opt_help(const char *pname) {
 		"\t   | --stpinc   FLOAT   (rprop)  step increment factor\n"
 		"\t   | --stpdec   FLOAT   (rprop)  step decrement factor\n"
 		"\t   | --cutoff           (rprop)  alternate projection\n"
-		"\t z | --peralpha FLOAT   (perceptron)  learning rate\n"
+		"\t-z | --peralpha FLOAT   (perceptron)  learning rate\n"
+		"\t-C | --miraC    FLOAT   (MIRA)  parameter\n"
 		"\n"
 		"Labelling mode:\n"
 		"    %1$s label [options] [input data] [output data]\n"
@@ -117,6 +118,7 @@ const opt_t opt_defaults = {
 	.rprop = {.stpmin = 1e-8, .stpmax = 50.0, .stpinc = 1.2, .stpdec = 0.5,
 	          .cutoff = false},
 	.perceptron = {.alpha = 0.01},
+	.mira = {.C = 1},
 	.label   = false,    .check   = false, .outsc = false,
 	.lblpost = false,    .nbest = 1
 };
@@ -152,6 +154,7 @@ struct {
 	{0, "##", "--maxls",   'I', offsetof(opt_t, lbfgs.maxls )},
 	{0, "##", "--eta0",    'F', offsetof(opt_t, sgdl1.eta0  )},
 	{0," ##", "--alpha",   'F', offsetof(opt_t, sgdl1.alpha )},
+	{0, "-C", "--miraC",   'F', offsetof(opt_t, mira.C )},
 	{0, "-z", "--peralpha",'F', offsetof(opt_t, perceptron.alpha )},
 	{0, "##", "--kappa",   'F', offsetof(opt_t, bcd.kappa   )},
 	{0, "##", "--stpmin",  'F', offsetof(opt_t, rprop.stpmin)},
