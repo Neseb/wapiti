@@ -46,21 +46,24 @@
 void trn_mira(mdl_t *mdl) {
 	const size_t  Y = mdl->nlbl;
 	const size_t  F = mdl->nftr;
-	//	const int     U = mdl->reader->nuni;
-	//	const int     B = mdl->reader->nbi;
+	//const int     U = mdl->reader->nuni;
+	//const int     B = mdl->reader->nbi;
 	const int     S = mdl->train->nseq;
 	const int     K = mdl->opt->maxiter;
-const double C = 1;
-//const double C = mdl->opt->mira.C;
-//	const double alpha = mdl->opt->mira.alpha;
+	const double C = 1;
+	//const double C = mdl->opt->mira.C;
 	double 	*w = mdl->theta;	
-	//wsum : somme de tous les poids
-	//TODO : vectoriser tout ça
-	double* wsum = xmalloc(F*sizeof(double));
-	for(size_t i = 0 ; i < F ; i++)
-		wsum[i] = w[i];
+	
+	//wSum : somme de tous les poids
+	double* wSum = xmalloc(F*sizeof(double));
+	// Nombre de fois que l'élément n'a pas été mis à jour
+	size_t* wCache = xmalloc(F*sizeof(size_t));
+	for(size_t i = 0 ; i < F ; i++) {
+		wSum[i] = w[i];
+		wCache[i] = 0;
+	}
 	//Nombre total de mises à jour de w
-	int N = 0;
+	size_t N = 1;
 
 
 	// We will process sequences in random order in each iteration, so we
@@ -129,28 +132,28 @@ const double C = 1;
 				// Pour le premier mot on ne regarde que les feat. unigrammes
 				const pos_t* pos = &(seq->pos[0]);
 				size_t y = out[0]; 
-				size_t yt = pos->lbl;
-				for(size_t p = 0 ; p < pos->ucnt && !uit_stop ; p++) {
+				size_t ys = pos->lbl;
+				for(size_t p = 0 ; p < pos->ucnt ; p++) {
 					const size_t o = pos->uobs[p];
-					featSum += w[mdl->uoff[o] + yt] - w[mdl->uoff[o] + y]; 
+					featSum += w[mdl->uoff[o] + ys] - w[mdl->uoff[o] + y]; 
 				}
 				//Pour tous les mots suivants, on regarde 
 				//à la fois les unigrammes et les bigrammes
-				for(int t = 1 ; t < T  && !uit_stop ; t++) { 
+				for(int t = 1 ; t < T ; t++) { 
 					pos = &(seq->pos[t]);
 					y = out[t]; 
-					yt = pos->lbl;
+					ys = pos->lbl;
 					size_t yp = out[t-1]; 
-					size_t ypt = seq->pos[t-1].lbl; 
+					size_t yps = seq->pos[t-1].lbl; 
 					for(size_t p = 0 ; p < pos->ucnt ; p++) {
 						const size_t o = pos->uobs[p];
-					featSum += w[mdl->uoff[o] + yt] - w[mdl->uoff[o] + y]; 
+					featSum += w[mdl->uoff[o] + ys] - w[mdl->uoff[o] + y]; 
 					}
 					for(size_t p = 0 ; p < pos->bcnt  && !uit_stop ; p++) {
 						const size_t o = pos->bobs[p];
 						size_t d = Y*yp + y;
-						size_t dt = Y*ypt + yt;
-					featSum += w[mdl->boff[o] + dt] - w[mdl->boff[o] + d];
+						size_t ds = Y*yps + ys;
+					featSum += w[mdl->boff[o] + ds] - w[mdl->boff[o] + d];
 					} 
 				}
 				double L = (1 - fmesure(out,seq,Y) - featSum) / (double) featCount;
@@ -158,53 +161,61 @@ const double C = 1;
 			// Maintenant qu'on a calculé alpha, on peut appliquer l'update perceptron
 				pos = &(seq->pos[0]);
 				y = out[0]; 
-				yt = pos->lbl;
-				for(size_t p = 0 ; p < pos->ucnt && !uit_stop ; p++) {
+				ys = pos->lbl;
+				for(size_t p = 0 ; p < pos->ucnt ; p++) {
 					const size_t o = pos->uobs[p];
-					w[mdl->uoff[o] + yt] += alpha;
-					w[mdl->uoff[o] + y] -= alpha;
-					for(size_t i = 0 ; i < F ; i++)
-						wsum[i] += w[i];
-					N++;
+					const size_t j = mdl->uoff[o] + y;		
+					const size_t js = mdl->uoff[o] + ys;		
+					wSum[j] += (N - wCache[j]) * w[j];
+					wSum[js] += (N - wCache[js]) * w[js];
+					w[js] += alpha;
+					w[j] -= alpha;
+					wCache[js] = N;
+					wCache[j] = N;
 				}
 				//Pour tous les mots suivants, on regarde 
 				//à la fois les unigrammes et les bigrammes
-				for(int t = 1 ; t < T  && !uit_stop ; t++) { 
+				for(int t = 1 ; t < T ; t++) { 
 					const pos_t *pos = &(seq->pos[t]);
-					size_t y = out[t]; 
-					size_t yt = pos->lbl;
-					size_t yp = out[t-1]; 
-					size_t ypt = seq->pos[t-1].lbl; 
+					const size_t y = out[t]; 
+					const size_t ys = pos->lbl;
+					const size_t yp = out[t-1]; 
+					const size_t yps = seq->pos[t-1].lbl; 
 					for(size_t p = 0 ; p < pos->ucnt ; p++) {
 						const size_t o = pos->uobs[p];
-						w[mdl->uoff[o] + yt] += alpha;
-						w[mdl->uoff[o] + y] -= alpha;
-						for(size_t i = 0 ; i < F ; i++)
-							wsum[i] += w[i];
-						N++;
+						const size_t j = mdl->uoff[o] + y;		
+						const size_t js = mdl->uoff[o] + ys;		
+						wSum[j] += (N - wCache[j]) * w[j];
+						wSum[js] += (N - wCache[js]) * w[js];
+						w[js] += alpha;
+						w[j] -= alpha;
+						wCache[js] = N;
+						wCache[j] = N;
 					}
-					for(size_t p = 0 ; p < pos->bcnt  && !uit_stop ; p++) {
+					for(size_t p = 0 ; p < pos->bcnt ; p++) {
 						const size_t o = pos->bobs[p];
-						size_t d = Y*yp + y;
-						size_t dt = Y*ypt + yt;
-						w[mdl->boff[o] + dt] += alpha;
-						w[mdl->boff[o] + d] -= alpha;
-						for(size_t i = 0 ; i < F ; i++)
-							wsum[i] += w[i];
-						N++;
+						const size_t j = mdl->boff[o] + Y*yp + y;		
+						const size_t js = mdl->boff[o] + Y*yps + ys;		
+						wSum[j] += (N - wCache[j]) * w[j];
+						wSum[js] += (N - wCache[js]) * w[js];
+						w[js] += alpha;
+						w[j] -= alpha;
+						wCache[js] = N;
+						wCache[j] = N;
 					} 
 				}
+				N++;
 			}
 			free(out);
-		}
-		//TODO : rajouter des uit_stop
+		}		
 		for(size_t i = 0 ; i < F ; i++)
-			w[i] = wsum[i] / N;
+			w[i] =  (wSum[i] + (N - wCache[i]) * w[i]) / (double) N;
 		// Repport progress back to the user
 		if (!uit_progress(mdl, k + 1, -1.0))
 			break;
 	}
-	free(wsum);
+	free(wSum);
+	free(wCache);
 	free(perm);
 };
 /*

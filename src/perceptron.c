@@ -45,23 +45,23 @@
 void trn_perceptron(mdl_t *mdl) {
 	const size_t  Y = mdl->nlbl;
 	const size_t  F = mdl->nftr;
-	//	const int     U = mdl->reader->nuni;
-	//	const int     B = mdl->reader->nbi;
+	//const int     U = mdl->reader->nuni;
+	//const int     B = mdl->reader->nbi;
 	const int     S = mdl->train->nseq;
 	const int     K = mdl->opt->maxiter;
 	const double alpha = mdl->opt->perceptron.alpha;
 	double 	*w = mdl->theta;	
+	
 	//wSum : somme de tous les poids
 	double* wSum = xmalloc(F*sizeof(double));
 	// Nombre de fois que l'élément n'a pas été mis à jour
 	size_t* wCache = xmalloc(F*sizeof(size_t));
-	
 	for(size_t i = 0 ; i < F ; i++) {
 		wSum[i] = w[i];
 		wCache[i] = 0;
 	}
 	//Nombre total de mises à jour de w
-	int N = 0;
+	size_t N = 1;
 
 	// We will process sequences in random order in each iteration, so we
 	// will have to permute them. The current permutation is stored in a
@@ -115,26 +115,20 @@ void trn_perceptron(mdl_t *mdl) {
 				const pos_t* pos = &(seq->pos[0]);
 				size_t y = out[0]; 
 				size_t ys = pos->lbl;
-				for(size_t p = 0 ; p < pos->ucnt && !uit_stop ; p++) {
+				for(size_t p = 0 ; p < pos->ucnt ; p++) {
 					const size_t o = pos->uobs[p];
-					
 					const size_t j = mdl->uoff[o] + y;		
 					const size_t js = mdl->uoff[o] + ys;		
-										
-					wSum[j] *= N - wCache[j];
-					wSum[js] *= N - wCache[js];
-
+					wSum[j] += (N - wCache[j]) * w[j];
+					wSum[js] += (N - wCache[js]) * w[js];
 					w[js] += alpha;
 					w[j] -= alpha;
-					N++;
-					wSum[js] += alpha;
-					wSum[j] -= alpha;
 					wCache[js] = N;
 					wCache[j] = N;
 				}
 				//Pour tous les mots suivants, on regarde 
 				//à la fois les unigrammes et les bigrammes
-				for(int t = 1 ; t < T  && !uit_stop ; t++) { 
+				for(int t = 1 ; t < T ; t++) { 
 					const pos_t *pos = &(seq->pos[t]);
 					const size_t y = out[t]; 
 					const size_t ys = pos->lbl;
@@ -144,40 +138,31 @@ void trn_perceptron(mdl_t *mdl) {
 						const size_t o = pos->uobs[p];
 						const size_t j = mdl->uoff[o] + y;		
 						const size_t js = mdl->uoff[o] + ys;		
-
-						wSum[j] *= N - wCache[j];
-						wSum[js] *= N - wCache[js];
-
+						wSum[j] += (N - wCache[j]) * w[j];
+						wSum[js] += (N - wCache[js]) * w[js];
 						w[js] += alpha;
 						w[j] -= alpha;
-						N++;
-						wSum[js] += alpha;
-						wSum[j] -= alpha;
 						wCache[js] = N;
 						wCache[j] = N;
 					}
-					for(size_t p = 0 ; p < pos->bcnt  && !uit_stop ; p++) {
+					for(size_t p = 0 ; p < pos->bcnt ; p++) {
 						const size_t o = pos->bobs[p];
 						const size_t j = mdl->boff[o] + Y*yp + y;		
 						const size_t js = mdl->boff[o] + Y*yps + ys;		
-
-						wSum[j] *= N - wCache[j];
-						wSum[js] *= N - wCache[js];
-
+						wSum[j] += (N - wCache[j]) * w[j];
+						wSum[js] += (N - wCache[js]) * w[js];
 						w[js] += alpha;
 						w[j] -= alpha;
-						N++;
-						wSum[js] += alpha;
-						wSum[j] -= alpha;
 						wCache[js] = N;
 						wCache[j] = N;
 					} 
 				}
+				N++;
 			}
 			free(out);
 		}
-//		for(size_t i = 0 ; i < F ; i++)
-//			w[i] = (N - wCache[i]) * wSum[i] / N;
+		for(size_t i = 0 ; i < F ; i++)
+			w[i] =  (wSum[i] + (N - wCache[i]) * w[i]) / (double) N;
 		// Repport progress back to the user
 		if (!uit_progress(mdl, k + 1, -1.0))
 			break;
@@ -210,4 +195,4 @@ for (size_t yp = 0; yp < Y; yp++)
 }
 }
 
- */
+*/

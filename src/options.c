@@ -118,7 +118,7 @@ const opt_t opt_defaults = {
 	.rprop = {.stpmin = 1e-8, .stpmax = 50.0, .stpinc = 1.2, .stpdec = 0.5,
 	          .cutoff = false},
 	.perceptron = {.alpha = 0.01},
-	.mira = {.C = 1},
+	.mira = {.C = 0.01},
 	.label   = false,    .check   = false, .outsc = false,
 	.lblpost = false,    .nbest = 1
 };
