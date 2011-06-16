@@ -51,14 +51,17 @@ void trn_perceptron(mdl_t *mdl) {
 	const int     K = mdl->opt->maxiter;
 	const double alpha = mdl->opt->perceptron.alpha;
 	double 	*w = mdl->theta;	
-	//wsum : somme de tous les poids
-	//TODO : vectoriser tout ça
-	double* wsum = xmalloc(F*sizeof(double));
-	for(size_t i = 0 ; i < F ; i++)
-		wsum[i] = w[i];
+	//wSum : somme de tous les poids
+	double* wSum = xmalloc(F*sizeof(double));
+	// Nombre de fois que l'élément n'a pas été mis à jour
+	size_t* wCache = xmalloc(F*sizeof(size_t));
+	
+	for(size_t i = 0 ; i < F ; i++) {
+		wSum[i] = w[i];
+		wCache[i] = 0;
+	}
 	//Nombre total de mises à jour de w
 	int N = 0;
-
 
 	// We will process sequences in random order in each iteration, so we
 	// will have to permute them. The current permutation is stored in a
@@ -84,7 +87,7 @@ void trn_perceptron(mdl_t *mdl) {
 		for (int sp = 0; sp < S && !uit_stop; sp++) {
 			const int s = perm[sp];
 			const seq_t *seq = mdl->train->seq[s];
-			int T = seq->len;
+			const int T = seq->len;
 			size_t* out = xmalloc(T * sizeof(size_t)); //tableau 
 			//de labels
 			tag_viterbi(mdl, seq, out,NULL,NULL);
@@ -104,60 +107,83 @@ void trn_perceptron(mdl_t *mdl) {
 				// si  y != y(s) (le meilleur n'est pas 
 				// la référence)
 				// theta = theta + marge = theta + 
-				// alpha*(features(y(t),x(t))- features(y,x(s)))
+				// alpha*(features(y(s),x(s))- features(y,x(s)))
 				//Pour chaque position t dans y, pour 
 				//chaque feature activée par (y,s,x) :
 				// On prend en compte les features 
 				// unigrammes du premier mot
 				const pos_t* pos = &(seq->pos[0]);
 				size_t y = out[0]; 
-				size_t yt = pos->lbl;
+				size_t ys = pos->lbl;
 				for(size_t p = 0 ; p < pos->ucnt && !uit_stop ; p++) {
 					const size_t o = pos->uobs[p];
-					w[mdl->uoff[o] + yt] += alpha;
-					w[mdl->uoff[o] + y] -= alpha;
-					for(size_t i = 0 ; i < F ; i++)
-						wsum[i] += w[i];
+					
+					const size_t j = mdl->uoff[o] + y;		
+					const size_t js = mdl->uoff[o] + ys;		
+										
+					wSum[j] *= N - wCache[j];
+					wSum[js] *= N - wCache[js];
+
+					w[js] += alpha;
+					w[j] -= alpha;
 					N++;
+					wSum[js] += alpha;
+					wSum[j] -= alpha;
+					wCache[js] = N;
+					wCache[j] = N;
 				}
 				//Pour tous les mots suivants, on regarde 
 				//à la fois les unigrammes et les bigrammes
 				for(int t = 1 ; t < T  && !uit_stop ; t++) { 
 					const pos_t *pos = &(seq->pos[t]);
-					size_t y = out[t]; 
-					size_t yt = pos->lbl;
-					size_t yp = out[t-1]; 
-					size_t ypt = seq->pos[t-1].lbl; 
+					const size_t y = out[t]; 
+					const size_t ys = pos->lbl;
+					const size_t yp = out[t-1]; 
+					const size_t yps = seq->pos[t-1].lbl; 
 					for(size_t p = 0 ; p < pos->ucnt ; p++) {
 						const size_t o = pos->uobs[p];
-						w[mdl->uoff[o] + yt] += alpha;
-						w[mdl->uoff[o] + y] -= alpha;
-						for(size_t i = 0 ; i < F ; i++)
-							wsum[i] += w[i];
+						const size_t j = mdl->uoff[o] + y;		
+						const size_t js = mdl->uoff[o] + ys;		
+
+						wSum[j] *= N - wCache[j];
+						wSum[js] *= N - wCache[js];
+
+						w[js] += alpha;
+						w[j] -= alpha;
 						N++;
+						wSum[js] += alpha;
+						wSum[j] -= alpha;
+						wCache[js] = N;
+						wCache[j] = N;
 					}
 					for(size_t p = 0 ; p < pos->bcnt  && !uit_stop ; p++) {
 						const size_t o = pos->bobs[p];
-						size_t d = Y*yp + y;
-						size_t dt = Y*ypt + yt;
-						w[mdl->boff[o] + dt] += alpha;
-						w[mdl->boff[o] + d] -= alpha;
-						for(size_t i = 0 ; i < F ; i++)
-							wsum[i] += w[i];
+						const size_t j = mdl->boff[o] + Y*yp + y;		
+						const size_t js = mdl->boff[o] + Y*yps + ys;		
+
+						wSum[j] *= N - wCache[j];
+						wSum[js] *= N - wCache[js];
+
+						w[js] += alpha;
+						w[j] -= alpha;
 						N++;
+						wSum[js] += alpha;
+						wSum[j] -= alpha;
+						wCache[js] = N;
+						wCache[j] = N;
 					} 
 				}
 			}
 			free(out);
 		}
-		//TODO : rajouter des uit_stop
-		for(size_t i = 0 ; i < F ; i++)
-			w[i] = wsum[i] / N;
+//		for(size_t i = 0 ; i < F ; i++)
+//			w[i] = (N - wCache[i]) * wSum[i] / N;
 		// Repport progress back to the user
 		if (!uit_progress(mdl, k + 1, -1.0))
 			break;
 	}
-	free(wsum);
+	free(wSum);
+	free(wCache);
 	free(perm);
 };
 /*
