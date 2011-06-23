@@ -71,3 +71,44 @@ double fmesure(size_t* out, const seq_t* seq, size_t Y ) {
 	return (2 * precision * recall) / (Y * (precision + recall)) ;
 
 }
+
+double nfmesure(size_t N,size_t n, size_t out[][N], const seq_t* seq, size_t Y ) {
+
+	// Approx phrase par phrase de la f-mesure
+	// fmesure = 2 * precision * rappel / (precision + rappel)
+
+	const size_t T = seq->len;
+	
+	int* posCount = malloc(Y * sizeof(int));
+	int* tagCount = malloc(Y * sizeof(int)); 
+	int* labCount = malloc(Y * sizeof(int));
+
+	for (size_t y = 0 ; y < Y ; y++ )
+		posCount[y] = tagCount[y] = labCount[y] = 0 ;
+
+	for(size_t t = 0 ; t < T ; t++ ) {
+		size_t y = out[t][n]; 
+		size_t yt = seq->pos[t].lbl; 
+		labCount[yt]++; //Nombre de fois que chaque label apparait dans la ref
+		tagCount[y]++; //Nombre de fois que chaque label est étiqueté
+		if(y == yt)
+			posCount[y]++; //Nombre de fois que l'étiquetage est bon
+	};
+
+	double precision = 0;
+	double recall = 0;
+
+	for(size_t y=0 ; y < Y ; y++) {
+		//TODO : tag(y) ou lab(y) = 0
+		double t = tagCount[y];
+		double l = labCount[y];
+		if (t)
+			precision += (double) posCount[y] / t;
+		if (l)	
+			recall += (double) posCount[y] / l;
+
+	}
+
+	return (2 * precision * recall) / (Y * (precision + recall)) ;
+
+}
