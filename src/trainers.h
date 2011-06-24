@@ -36,6 +36,7 @@ void trn_bcd(mdl_t *mdl);
 void trn_rprop(mdl_t *mdl);
 void trn_perceptron(mdl_t *mdl);
 void trn_mira(mdl_t *mdl);
+void trn_mira_single(mdl_t *mdl);
 
 #endif
 

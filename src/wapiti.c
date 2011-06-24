@@ -64,6 +64,7 @@ static const struct {
 	{"rprop-", trn_rprop},
 	{"perceptron", trn_perceptron},
 	{"mira", trn_mira},
+	{"mira_single", trn_mira_single},
 	{"auto",   trn_auto }
 };
 static const int trn_cnt = sizeof(trn_lst) / sizeof(trn_lst[0]);

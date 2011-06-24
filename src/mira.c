@@ -29,6 +29,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "model.h"
 #include "options.h"
@@ -44,15 +45,15 @@
 //Algorithme MIRA
 
 void trn_mira(mdl_t *mdl) {
+
+	/* initialize random seed: */
+	srand ( time(NULL) );
+
 	const size_t  Y = mdl->nlbl;
 	const size_t  F = mdl->nftr;
-	//const int     U = mdl->reader->nuni;
-	//const int     B = mdl->reader->nbi;
 	const int     S = mdl->train->nseq;
 	const int     K = mdl->opt->maxiter;
-	//	const double C = 1;
 	const double C = mdl->opt->mira.C;
-	const int N = mdl->opt->nbest;
 
 	double 	*w = mdl->theta;	
 
@@ -64,9 +65,16 @@ void trn_mira(mdl_t *mdl) {
 		wSum[i] = w[i];
 		wCache[i] = 0;
 	}
-	//Nombre total de mises à jour de w
+	//Nombre total de mises à jour de w, devrait être à terme K*S
 	size_t wN = 1;
 
+	const int N = mdl->opt->nbest;
+	double alphaSum;			
+	bool different[N];
+	int featCount[N];
+	double featSum[N];
+	double delta[N];
+	double alpha[N];
 
 	// We will process sequences in random order in each iteration, so we
 	// will have to permute them. The current permutation is stored in a
@@ -97,40 +105,30 @@ void trn_mira(mdl_t *mdl) {
 			size_t (*out_2d)[T][N] = (void *) out; 
 			// On récupère les n-best
 			tag_nbviterbi(mdl, seq, N, *out_2d,NULL,NULL);
-			//On itère sur les n-best			
-			for (int n =0; n < N; n++) {
 
-				bool differents = false;
-				//On commence par regarder si le meilleur (out) est 
+			//On itère sur les n-best pour calculer les deltas correspondant à chacun
+			for (int n =0; n < N; n++) {
+				different[n] = false;
+				featCount[n] = featSum[n] = 0;
+				delta[n] = 0;
+				alpha[n] = 0;
+
+				//On commence par regarder l'hypothèse  (out[][n]) est 
 				//la référence (seq)
-				int featCount = 0;
-				double featSum = 0;
+				// featCount = \| h(e^t,f^t)-h(e,f^t)\|² = cardinal de la différence 
+				// symétrique entre les caracts de la ref et celle de l'hyp
 				for(int t = 0 ; t < T ; t++) {
 					//Pour chaque unité dans les séquences : 
 					//(les deux en ont autant)
 					if ((*out_2d)[t][n] != (seq->pos[t]).lbl ) { 
 						//si les deux labels sont différents
-						differents = true;
+						different[n] = true;
 						// Norme de \delta h : pour chaque, si égal 0 si différents +1
-						// = count
-						featCount++;	
+						featCount[n]++;
 					}
 				}
-				if (differents) { 
-					// si  y != y(s) (le meilleur n'est pas 
-					// la référence)
-					// theta = theta + marge = theta + 
-					// alpha*(features(y(t),x(t))- features(y,x(s)))
-					//Pour chaque position t dans y, pour 
-					//chaque feature activée par (y,s,x) :
-					// On prend en compte les features 
-					// unigrammes du premier mot
-
-					//Alpha dépend de ....
-					//On a alpha = max(0,min(C,(loss(out,seq) 
-					// - \delta H_(t-1))/norme(\delta h_(t-1))
-
-					//On calcule alpha correspondant à l'hypothèse en cours
+				if (different[n]) { 
+					//On calcule delta pour chaque hypothèse en cours
 					//L = 1 - fmesure(out, pos, T)
 					// \delta H : pour chaque si égal 0 si différents +(différence
 					// des poids)
@@ -141,7 +139,7 @@ void trn_mira(mdl_t *mdl) {
 					size_t ys = pos->lbl;
 					for(size_t p = 0 ; p < pos->ucnt ; p++) {
 						const size_t o = pos->uobs[p];
-						featSum += w[mdl->uoff[o] + ys] - w[mdl->uoff[o] + y]; 
+						featSum[n] += w[mdl->uoff[o] + ys] - w[mdl->uoff[o] + y]; 
 					}
 					//Pour tous les mots suivants, on regarde 
 					//à la fois les unigrammes et les bigrammes
@@ -153,31 +151,49 @@ void trn_mira(mdl_t *mdl) {
 						size_t yps = seq->pos[t-1].lbl; 
 						for(size_t p = 0 ; p < pos->ucnt ; p++) {
 							const size_t o = pos->uobs[p];
-							featSum += w[mdl->uoff[o] + ys] - w[mdl->uoff[o] + y]; 
+							featSum[n] += w[mdl->uoff[o] + ys] - w[mdl->uoff[o] + y]; 
 						}
 						for(size_t p = 0 ; p < pos->bcnt  && !uit_stop ; p++) {
 							const size_t o = pos->bobs[p];
 							size_t d = Y*yp + y;
 							size_t ds = Y*yps + ys;
-							featSum += w[mdl->boff[o] + ds] - w[mdl->boff[o] + d];
+							featSum[n] += w[mdl->boff[o] + ds] - w[mdl->boff[o] + d];
 						} 
 					}
-					double L = (1 - nfmesure(N,n,*out_2d,seq,Y) - featSum) / (double) featCount;
-					double alpha = (L < C) ? ((L > 0) ? L : 0) : C ;
-					// Maintenant qu'on a calculé alpha, on peut appliquer l'update perceptron
-					pos = &(seq->pos[0]);
-					y = (*out_2d)[0][n]; 
-					ys = pos->lbl;
+					delta[n] = (1 - nfmesure(N,n,*out_2d,seq,Y) - featSum[n]) / (double) featCount[n];
+
+				} else 	delta[n] = 0 ;
+								
+			}	
+	
+			// On calcule les \alpha en faisant en sorte que la somme reste inférieure à C
+			alphaSum = 0;			
+			while(alphaSum < C) {
+				int n = rand() % N;
+				if(delta[n] > 0) {
+					alpha[n] += delta[n];
+					alphaSum += delta[n];										
+				}
+			}
+
+			//On itère sur les N-best pour faire l'update perceptron 
+			for(int n=0; n < N; n++) {
+				if (different[n]) { 
+					// Maintenant qu'on a calculé les  alpha, on peut appliquer l'update perceptron
+					// Pour le premier mot on ne regarde que les feat. unigrammes
+					const pos_t* pos = &(seq->pos[0]);
+					const size_t y = (*out_2d)[0][n]; 
+					const size_t ys = pos->lbl;
 					for(size_t p = 0 ; p < pos->ucnt ; p++) {
 						const size_t o = pos->uobs[p];
 						const size_t j = mdl->uoff[o] + y;		
 						const size_t js = mdl->uoff[o] + ys;		
-						wSum[j] += (N - wCache[j]) * w[j];
-						wSum[js] += (N - wCache[js]) * w[js];
-						w[js] += alpha;
-						w[j] -= alpha;
-						wCache[js] = N;
-						wCache[j] = N;
+						wSum[j] += (wN - wCache[j]) * w[j];
+						wSum[js] += (wN - wCache[js]) * w[js];
+						w[js] += alpha[n];
+						w[j] -= alpha[n];
+						wCache[js] = wN;
+						wCache[j] = wN;
 					}
 					//Pour tous les mots suivants, on regarde 
 					//à la fois les unigrammes et les bigrammes
@@ -191,23 +207,23 @@ void trn_mira(mdl_t *mdl) {
 							const size_t o = pos->uobs[p];
 							const size_t j = mdl->uoff[o] + y;		
 							const size_t js = mdl->uoff[o] + ys;		
-							wSum[j] += (N - wCache[j]) * w[j];
-							wSum[js] += (N - wCache[js]) * w[js];
-							w[js] += alpha;
-							w[j] -= alpha;
-							wCache[js] = N;
-							wCache[j] = N;
+							wSum[j] += (wN - wCache[j]) * w[j];
+							wSum[js] += (wN - wCache[js]) * w[js];
+							w[js] += alpha[n];
+							w[j] -= alpha[n];
+							wCache[js] = wN;
+							wCache[j] = wN;
 						}
 						for(size_t p = 0 ; p < pos->bcnt ; p++) {
 							const size_t o = pos->bobs[p];
 							const size_t j = mdl->boff[o] + Y*yp + y;		
 							const size_t js = mdl->boff[o] + Y*yps + ys;		
-							wSum[j] += (N - wCache[j]) * w[j];
-							wSum[js] += (N - wCache[js]) * w[js];
-							w[js] += alpha;
-							w[j] -= alpha;
-							wCache[js] = N;
-							wCache[j] = N;
+							wSum[j] += (wN - wCache[j]) * w[j];
+							wSum[js] += (wN - wCache[js]) * w[js];
+							w[js] += alpha[n];
+							w[j] -= alpha[n];
+							wCache[js] = wN;
+							wCache[j] = wN;
 						} 		
 					}
 				}

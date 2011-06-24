@@ -156,6 +156,7 @@ struct {
 	{0," ##", "--alpha",   'F', offsetof(opt_t, sgdl1.alpha )},
 	{0, "-C", "--miraC",   'F', offsetof(opt_t, mira.C )},
 	{0, "-z", "--peralpha",'F', offsetof(opt_t, perceptron.alpha )},
+	{0, "-n", "--nbest",   'I', offsetof(opt_t, nbest       )},
 	{0, "##", "--kappa",   'F', offsetof(opt_t, bcd.kappa   )},
 	{0, "##", "--stpmin",  'F', offsetof(opt_t, rprop.stpmin)},
 	{0, "##", "--stpmax",  'F', offsetof(opt_t, rprop.stpmax)},
