@@ -61,15 +61,10 @@ double fmesure(size_t* out, const seq_t* seq, size_t Y ) {
 		//TODO : tag(y) ou lab(y) = 0
 		double t = tagCount[y];
 		double l = labCount[y];
-		if (t)
-			precision += (double) posCount[y] / t;
-		if (l)	
-			recall += (double) posCount[y] / l;
-
+		if (t) precision += (double) posCount[y] / t;
+		if (l) recall += (double) posCount[y] / l;
 	}
-
 	return (2 * precision * recall) / (Y * (precision + recall)) ;
-
 }
 
 double nfmesure(size_t N,size_t n, size_t out[][N], const seq_t* seq, size_t Y ) {
@@ -94,7 +89,6 @@ double nfmesure(size_t N,size_t n, size_t out[][N], const seq_t* seq, size_t Y )
 		if(y == yt)
 			posCount[y]++; //Nombre de fois que l'étiquetage est bon
 	};
-
 	double precision = 0;
 	double recall = 0;
 
@@ -102,13 +96,8 @@ double nfmesure(size_t N,size_t n, size_t out[][N], const seq_t* seq, size_t Y )
 		//TODO : tag(y) ou lab(y) = 0
 		double t = tagCount[y];
 		double l = labCount[y];
-		if (t)
-			precision += (double) posCount[y] / t;
-		if (l)	
-			recall += (double) posCount[y] / l;
-
+		if (t) precision += (double) posCount[y] / t;
+		if (l) recall += (double) posCount[y] / l;
 	}
-
 	return (2 * precision * recall) / (Y * (precision + recall)) ;
-
 }

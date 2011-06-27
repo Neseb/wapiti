@@ -46,12 +46,9 @@
 void trn_mira_single(mdl_t *mdl) {
 	const size_t  Y = mdl->nlbl;
 	const size_t  F = mdl->nftr;
-	//const int     U = mdl->reader->nuni;
-	//const int     B = mdl->reader->nbi;
 	const int     S = mdl->train->nseq;
 	const int     K = mdl->opt->maxiter;
-	const double C = 1;
-	//const double C = mdl->opt->mira.C;
+	const double C = mdl->opt->mira.C;
 	double 	*w = mdl->theta;	
 	
 	//wSum : somme de tous les poids
@@ -156,8 +153,11 @@ void trn_mira_single(mdl_t *mdl) {
 					featSum += w[mdl->boff[o] + ds] - w[mdl->boff[o] + d];
 					} 
 				}
-				double L = (1 - fmesure(out,seq,Y) - featSum) / (double) featCount;
-				double alpha = (L < C) ? ((L > 0) ? L : 0) : C ;
+				size_t (*out_2d)[T][1] = (void*) out;
+				double delta = (1 - nfmesure(1,0,*out_2d,seq,Y) - featSum) / (double) featCount;
+			//	double delta = (1 - fmesure(out,seq,Y) - featSum) / (double) featCount;
+			if(delta<0) printf("delta : %g", delta);
+				double alpha = (delta < C) ? ((delta > 0) ? delta : 0) : C ;
 			// Maintenant qu'on a calculé alpha, on peut appliquer l'update perceptron
 				pos = &(seq->pos[0]);
 				y = out[0]; 

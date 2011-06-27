@@ -45,10 +45,10 @@
 //Algorithme MIRA
 
 void trn_mira(mdl_t *mdl) {
-
+//printf("point 0");
 	/* initialize random seed: */
 	srand ( time(NULL) );
-
+//printf("point 42");
 	const size_t  Y = mdl->nlbl;
 	const size_t  F = mdl->nftr;
 	const int     S = mdl->train->nseq;
@@ -67,7 +67,7 @@ void trn_mira(mdl_t *mdl) {
 	}
 	//Nombre total de mises à jour de w, devrait être à terme K*S
 	size_t wN = 1;
-
+//printf("Point 1");
 	const int N = mdl->opt->nbest;
 	double alphaSum;			
 	bool different[N];
@@ -106,14 +106,14 @@ void trn_mira(mdl_t *mdl) {
 			// On récupère les n-best
 			tag_nbviterbi(mdl, seq, N, *out_2d,NULL,NULL);
 
-			//On itère sur les n-best pour calculer les deltas correspondant à chacun
+			//printf("On itère sur les n-best pour calculer les deltas correspondant à chacun");
 			for (int n =0; n < N; n++) {
 				different[n] = false;
 				featCount[n] = featSum[n] = 0;
 				delta[n] = 0;
 				alpha[n] = 0;
 
-				//On commence par regarder l'hypothèse  (out[][n]) est 
+				//On commence par regarder  si l'hypothèse  (out[][n]) est 
 				//la référence (seq)
 				// featCount = \| h(e^t,f^t)-h(e,f^t)\|² = cardinal de la différence 
 				// symétrique entre les caracts de la ref et celle de l'hyp
@@ -123,7 +123,7 @@ void trn_mira(mdl_t *mdl) {
 					if ((*out_2d)[t][n] != (seq->pos[t]).lbl ) { 
 						//si les deux labels sont différents
 						different[n] = true;
-						// Norme de \delta h : pour chaque, si égal 0 si différents +1
+						// Norme de \delta h : pour chaque position, si égal 0 si différents +1
 						featCount[n]++;
 					}
 				}
@@ -163,20 +163,40 @@ void trn_mira(mdl_t *mdl) {
 					delta[n] = (1 - nfmesure(N,n,*out_2d,seq,Y) - featSum[n]) / (double) featCount[n];
 
 				} else 	delta[n] = 0 ;
-								
+				printf("delta(n) = %f\n", delta[n]);					
 			}	
 	
-			// On calcule les \alpha en faisant en sorte que la somme reste inférieure à C
+//printf(" On calcule les \alpha en faisant en sorte que la somme reste inférieure à C");
 			alphaSum = 0;			
-			while(alphaSum < C) {
+			int rough[N]; 
+			for(int n =0;n<N;n++) rough[n] = 0;
+			int nTmp = 0;	
+			while(alphaSum < C && nTmp < N) { 
 				int n = rand() % N;
-				if(delta[n] > 0) {
-					alpha[n] += delta[n];
-					alphaSum += delta[n];										
+				if(rough[n] == 0) {
+					if(delta[n] > 0) {
+						alpha[n] += delta[n];
+						alphaSum += delta[n];
+						printf("Somme : %f\n",alphaSum);
+					}
+					rough[n] = 1;
+					nTmp++;
 				}
 			}
 
-			//On itère sur les N-best pour faire l'update perceptron 
+
+/*			while(alphaSum < C) { 
+				int n = rand() % N;
+			//	printf("%d\n",n); 
+			//	printf("\\delta(n) : %f\n",delta[n]);
+				if(delta[n] > 0) {
+					alpha[n] += delta[n];
+					alphaSum += delta[n];
+					printf("Somme : %f\n",alphaSum);
+				}
+			}*/
+
+//printf("On itère sur les N-best pour faire l'update perceptron " );
 			for(int n=0; n < N; n++) {
 				if (different[n]) { 
 					// Maintenant qu'on a calculé les  alpha, on peut appliquer l'update perceptron
@@ -228,7 +248,7 @@ void trn_mira(mdl_t *mdl) {
 					}
 				}
 				wN++;
-			}
+			} 
 			free(out);
 		}		
 		for(size_t i = 0 ; i < F ; i++)
