@@ -45,10 +45,10 @@
 //Algorithme MIRA
 
 void trn_mira(mdl_t *mdl) {
-//printf("point 0");
+	//printf("point 0");
 	/* initialize random seed: */
 	srand ( time(NULL) );
-//printf("point 42");
+	//printf("point 42");
 	const size_t  Y = mdl->nlbl;
 	const size_t  F = mdl->nftr;
 	const int     S = mdl->train->nseq;
@@ -67,11 +67,10 @@ void trn_mira(mdl_t *mdl) {
 	}
 	//Nombre total de mises à jour de w, devrait être à terme K*S
 	size_t wN = 1;
-//printf("Point 1");
+	//printf("Point 1");
 	const int N = mdl->opt->nbest;
 	double alphaSum;			
-	bool different[N];
-	int featCount[N];
+	size_t featCount[N];
 	double featSum[N];
 	double delta[N];
 	double alpha[N];
@@ -87,15 +86,16 @@ void trn_mira(mdl_t *mdl) {
 	for (int k = 0 ; k < K && !uit_stop; k++) { 
 		//pour un nombre maxiter de fois
 
-		// First we shuffle the sequence by making a lot of random swap
+		/*		// First we shuffle the sequence by making a lot of random swap
 		// of entry in the permutation index.
 		for (int s = 0; s < S; s++) {
-			const int a = rand() % S;
-			const int b = rand() % S;
-			const int t = perm[a];
-			perm[a] = perm[b];
-			perm[b] = t;
+		const int a = rand() % S;
+		const int b = rand() % S;
+		const int t = perm[a];
+		perm[a] = perm[b];
+		perm[b] = t;
 		}
+		*/
 		// And so, we can process sequence in a random order
 		for (int sp = 0; sp < S && !uit_stop; sp++) {
 			const int s = perm[sp];
@@ -108,8 +108,10 @@ void trn_mira(mdl_t *mdl) {
 
 			//printf("On itère sur les n-best pour calculer les deltas correspondant à chacun");
 			for (int n =0; n < N; n++) {
-				different[n] = false;
-				featCount[n] = featSum[n] = 0;
+				printf("\n sp = %d ",sp);
+				featCount[n] = 0;
+				featSum[n] = 0;
+				printf("featSum = %g ",featSum[n]);
 				delta[n] = 0;
 				alpha[n] = 0;
 
@@ -118,16 +120,16 @@ void trn_mira(mdl_t *mdl) {
 				// featCount = \| h(e^t,f^t)-h(e,f^t)\|² = cardinal de la différence 
 				// symétrique entre les caracts de la ref et celle de l'hyp
 				for(int t = 0 ; t < T ; t++) {
-					//Pour chaque unité dans les séquences : 
+					//Pour chaque position dans les séquences : 
 					//(les deux en ont autant)
 					if ((*out_2d)[t][n] != (seq->pos[t]).lbl ) { 
 						//si les deux labels sont différents
-						different[n] = true;
 						// Norme de \delta h : pour chaque position, si égal 0 si différents +1
 						featCount[n]++;
 					}
 				}
-				if (different[n]) { 
+				printf("featCount = %lu ", featCount[n]);
+				if (featCount[n]) { 
 					//On calcule delta pour chaque hypothèse en cours
 					//L = 1 - fmesure(out, pos, T)
 					// \delta H : pour chaque si égal 0 si différents +(différence
@@ -162,43 +164,49 @@ void trn_mira(mdl_t *mdl) {
 					}
 					delta[n] = (1 - nfmesure(N,n,*out_2d,seq,Y) - featSum[n]) / (double) featCount[n];
 
-				} else 	delta[n] = 0 ;
-				printf("delta(n) = %f\n", delta[n]);					
-			}	
-	
-//printf(" On calcule les \alpha en faisant en sorte que la somme reste inférieure à C");
+				} ;
+				printf("featsum = %f ", featSum[n]);	
+				printf("delta = %f ", delta[n]);					
+			};	
+
+			//printf(" On calcule les \alpha en faisant en sorte que la somme reste inférieure à C");
 			alphaSum = 0;			
 			int rough[N]; 
 			for(int n =0;n<N;n++) rough[n] = 0;
 			int nTmp = 0;	
-			while(alphaSum < C && nTmp < N) { 
+			while(nTmp < N) { 
 				int n = rand() % N;
-				if(rough[n] == 0) {
+				if(!rough[n]) {
 					if(delta[n] > 0) {
-						alpha[n] += delta[n];
-						alphaSum += delta[n];
-						printf("Somme : %f\n",alphaSum);
+						double b = delta[n];
+						if(alphaSum + b > C) { 
+							alpha[n] += C-alphaSum;
+							break;
+						}
+						alpha[n] += b;
+						printf("Somme : %f ",alphaSum);
 					}
 					rough[n] = 1;
 					nTmp++;
 				}
-			}
+			};
+			
+for(int n= 0;n< N;n++) printf("alpha(%d) = %g, alphaSum = %g ", n, alpha[n],alphaSum);
 
-
-/*			while(alphaSum < C) { 
-				int n = rand() % N;
+			/*			while(alphaSum < C) { 
+						int n = rand() % N;
 			//	printf("%d\n",n); 
 			//	printf("\\delta(n) : %f\n",delta[n]);
-				if(delta[n] > 0) {
-					alpha[n] += delta[n];
-					alphaSum += delta[n];
-					printf("Somme : %f\n",alphaSum);
-				}
+			if(delta[n] > 0) {
+			alpha[n] += delta[n];
+			alphaSum += delta[n];
+			printf("Somme : %f\n",alphaSum);
+			}
 			}*/
 
-//printf("On itère sur les N-best pour faire l'update perceptron " );
+			//printf("On itère sur les N-best pour faire l'update perceptron " );
 			for(int n=0; n < N; n++) {
-				if (different[n]) { 
+				if (featCount[n]) { 
 					// Maintenant qu'on a calculé les  alpha, on peut appliquer l'update perceptron
 					// Pour le premier mot on ne regarde que les feat. unigrammes
 					const pos_t* pos = &(seq->pos[0]);
@@ -252,7 +260,7 @@ void trn_mira(mdl_t *mdl) {
 			free(out);
 		}		
 		for(size_t i = 0 ; i < F ; i++)
-			w[i] =  (wSum[i] + (wN - wCache[i]) * w[i]) / (double) N;
+			w[i] =  (wSum[i] + (wN - wCache[i]) * w[i]) / (double) wN;
 		// Repport progress back to the user
 		if (!uit_progress(mdl, k + 1, -1.0))
 			break;
@@ -261,28 +269,3 @@ void trn_mira(mdl_t *mdl) {
 	free(wCache);
 	free(perm);
 };
-/*
-theta : contient toutes les features présentes dans le train (tous les tests sur les observations, * Y feat unigrammes * YY feat bigrammes)
-qui??? génère les feat pour une phrase (d'entrainement...) donnée ?
--> défini dans /sequence.h/, |uobs| est créé dans _dotrain_
-
-l'algo d'entraînement est appelé dans dotrain(mdl_t *mdl), avec comme argument un modèle (où les données d'entraînement ont été chargées : on a les uobs , les bobs dans seq->pos[i] : données de la séquence d'entraînement à la position $i$, cf sequence.h
-
-
-// Pour chaque position dans la séquence
-for (int t = 0; t < T; t++) {
-// On récupère les données à cette position
-const pos_t *pos = &(seq->pos[t]);
-// Pour chaque label possible
-for (size_t y = 0; y < Y; y++) {
-double sum = 0.0;
-for (size_t n = 0; n < pos->ucnt; n++) {
-const size_t o = pos->uobs[n];
-sum += x[mdl->uoff[o] + y];
-}
-for (size_t yp = 0; yp < Y; yp++)
-(*psi)[t][yp][y] = sum;
-}
-}
-
-*/

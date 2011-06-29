@@ -74,7 +74,7 @@ void trn_mira_single(mdl_t *mdl) {
 	for (int k = 0 ; k < K && !uit_stop; k++) { 
 		//pour un nombre maxiter de fois
 
-		// First we shuffle the sequence by making a lot of random swap
+/*		// First we shuffle the sequence by making a lot of random swap
 		// of entry in the permutation index.
 		for (int s = 0; s < S; s++) {
 			const int a = rand() % S;
@@ -83,8 +83,10 @@ void trn_mira_single(mdl_t *mdl) {
 			perm[a] = perm[b];
 			perm[b] = t;
 		}
+*/
 		// And so, we can process sequence in a random order
 		for (int sp = 0; sp < S && !uit_stop; sp++) {
+printf("\n sp = %d ",sp);	
 			const int s = perm[sp];
 			const seq_t *seq = mdl->train->seq[s];
 			int T = seq->len;
@@ -94,7 +96,7 @@ void trn_mira_single(mdl_t *mdl) {
 			bool differents = false;
 			//On commence par regarder si le meilleur (out) est 
 			//la référence (seq)
-			int featCount = 0;
+			size_t featCount = 0;
 			double featSum = 0;
 			for(int t = 0 ; t < T ; t++) {
 				//Pour chaque unité dans les séquences : 
@@ -155,8 +157,11 @@ void trn_mira_single(mdl_t *mdl) {
 				}
 				size_t (*out_2d)[T][1] = (void*) out;
 				double delta = (1 - nfmesure(1,0,*out_2d,seq,Y) - featSum) / (double) featCount;
+printf(" featsum : %f ", featSum);
+printf(" featcount : %lu ", featCount);
+
 			//	double delta = (1 - fmesure(out,seq,Y) - featSum) / (double) featCount;
-			if(delta<0) printf("delta : %g", delta);
+			printf("delta : %g ", delta);
 				double alpha = (delta < C) ? ((delta > 0) ? delta : 0) : C ;
 			// Maintenant qu'on a calculé alpha, on peut appliquer l'update perceptron
 				pos = &(seq->pos[0]);
