@@ -1,2 +1,2 @@
 #!/bin/sh
-make && ./wapiti train -a mira -n 1 -C 1 -p dat/pattern.txt -d dat/test.txt dat/train.txt model
+make && ./wapiti train -a mira -n 10 -C 1 -p dat/nppattern.txt -d dat/nptest.txt dat/nptrain.txt model

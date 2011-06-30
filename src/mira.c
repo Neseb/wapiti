@@ -108,10 +108,10 @@ void trn_mira(mdl_t *mdl) {
 
 			//printf("On itère sur les n-best pour calculer les deltas correspondant à chacun");
 			for (int n =0; n < N; n++) {
-				printf("\n sp = %d ",sp);
+				//printf("\n sp = %d ",sp);
 				featCount[n] = 0;
 				featSum[n] = 0;
-				printf("featSum = %g ",featSum[n]);
+				//printf("featSum = %g ",featSum[n]);
 				delta[n] = 0;
 				alpha[n] = 0;
 
@@ -128,7 +128,7 @@ void trn_mira(mdl_t *mdl) {
 						featCount[n]++;
 					}
 				}
-				printf("featCount = %lu ", featCount[n]);
+				//printf("featCount = %lu ", featCount[n]);
 				if (featCount[n]) { 
 					//On calcule delta pour chaque hypothèse en cours
 					//L = 1 - fmesure(out, pos, T)
@@ -165,8 +165,8 @@ void trn_mira(mdl_t *mdl) {
 					delta[n] = (1 - nfmesure(N,n,*out_2d,seq,Y) - featSum[n]) / (double) featCount[n];
 
 				} ;
-				printf("featsum = %f ", featSum[n]);	
-				printf("delta = %f ", delta[n]);					
+				//printf("featsum = %f ", featSum[n]);	
+				//printf("delta = %f ", delta[n]);					
 			};	
 
 			//printf(" On calcule les \alpha en faisant en sorte que la somme reste inférieure à C");
@@ -184,14 +184,14 @@ void trn_mira(mdl_t *mdl) {
 							break;
 						}
 						alpha[n] += b;
-						printf("Somme : %f ",alphaSum);
+						//printf("Somme : %f ",alphaSum);
 					}
 					rough[n] = 1;
 					nTmp++;
 				}
 			};
 			
-for(int n= 0;n< N;n++) printf("alpha(%d) = %g, alphaSum = %g ", n, alpha[n],alphaSum);
+//for(int n= 0;n< N;n++) printf("alpha(%d) = %g, alphaSum = %g ", n, alpha[n],alphaSum);
 
 			/*			while(alphaSum < C) { 
 						int n = rand() % N;

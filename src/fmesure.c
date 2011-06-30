@@ -68,7 +68,7 @@ double fmesure(size_t* out, const seq_t* seq, size_t Y ) {
 double v = precision + recall;
 double u = (v) ? (2 * precision * recall) / (Y *v)  : 0;
 
-printf("f =  %g ",u); 
+//printf("f =  %g ",u); 
 return u;
 }
 
@@ -108,6 +108,6 @@ double nfmesure(size_t N,size_t n, size_t out[][N], const seq_t* seq, size_t Y )
 double v = precision + recall;
 double u = (v) ? (2 * precision * recall) / (Y *v)  : 0;
 
-printf("f =  %g ",u); 
+//printf("f =  %g ",u); 
 return u;
 }
