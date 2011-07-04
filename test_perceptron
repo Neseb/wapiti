@@ -1,2 +1,2 @@
 #!/bin/sh
-make && ./wapiti train -a perceptron -C 1 -p dat/chpattern.txt -d dat/chtest.txt dat/chtrain.txt model
+make && ./wapiti train -a perceptron -C 1 -p dat/pattern.txt -d dat/test.txt dat/train.txt model

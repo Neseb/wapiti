@@ -170,17 +170,21 @@ void trn_mira(mdl_t *mdl) {
 			};	
 
 			//printf(" On calcule les \alpha en faisant en sorte que la somme reste inférieure à C");
-			alphaSum = 0;			
+			double b = delta[0];
+			alpha[0] = (b<0) ? 0 : ((b>C) ? C : b) ; 
+			alphaSum = alpha[0];			
 			int rough[N]; 
-			for(int n =0;n<N;n++) rough[n] = 0;
-			int nTmp = 0;	
+
+			for(int n =1;n<N;n++) rough[n] = 0;
+			int nTmp = 1;	
+
 			while(nTmp < N) { 
-				int n = rand() % N;
+				int n = 1 + rand() % (N-1);
 				if(!rough[n]) {
 					if(delta[n] > 0) {
-						double b = delta[n];
+						b = delta[n];
 						if(alphaSum + b > C) { 
-							alpha[n] += C-alphaSum;
+		//					alpha[n] += C-alphaSum;
 							break;
 						}
 						alpha[n] += b;
@@ -190,7 +194,7 @@ void trn_mira(mdl_t *mdl) {
 					nTmp++;
 				}
 			};
-			
+
 //for(int n= 0;n< N;n++) printf("alpha(%d) = %g, alphaSum = %g ", n, alpha[n],alphaSum);
 
 			/*			while(alphaSum < C) { 

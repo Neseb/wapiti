@@ -76,13 +76,14 @@ void trn_perceptron(mdl_t *mdl) {
 
 		// First we shuffle the sequence by making a lot of random swap
 		// of entry in the permutation index.
-		for (int s = 0; s < S; s++) {
+/*		for (int s = 0; s < S; s++) {
 			const int a = rand() % S;
 			const int b = rand() % S;
 			const int t = perm[a];
 			perm[a] = perm[b];
 			perm[b] = t;
 		}
+*/
 		// And so, we can process sequence in a random order
 		for (int sp = 0; sp < S && !uit_stop; sp++) {
 			const int s = perm[sp];
